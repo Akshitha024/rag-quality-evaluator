@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: rev — RAG evaluator
+authors:
+  - family-names: Lingampally
+    given-names: Akshitha Reddy
+type: software
+date-released: 2024-07-22
+repository-code: https://github.com/Akshitha024/rag-evaluator
+license: MIT
+references:
+  - type: article
+    title: "RAGAS: Automated Evaluation of Retrieval Augmented Generation"
+    authors: [{family-names: Es, given-names: Shahul}]
+    year: 2023
+    url: https://arxiv.org/abs/2309.15217
+  - type: article
+    title: "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"
+    authors: [{family-names: Zheng, given-names: Lianmin}]
+    year: 2023
+    url: https://arxiv.org/abs/2306.05685
+  - type: article
+    title: "SelfCheckGPT: Zero-Resource Black-Box Hallucination Detection"
+    authors: [{family-names: Manakul, given-names: Potsawee}]
+    year: 2023
+    url: https://arxiv.org/abs/2303.08896
