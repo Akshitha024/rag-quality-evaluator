@@ -1,5 +1,5 @@
 ---
-title: "rag-quality-evaluator: RAG quality evaluator with faithfulness, citation grounding, and drift detection"
+title: "rag-quality-evaluator: faithfulness, citation grounding, and drift detection for RAG systems"
 author: "Akshitha Reddy Lingampally"
 date: "2026-06-06"
 geometry: margin=1in
@@ -8,198 +8,184 @@ fontsize: 11pt
 
 # Abstract
 
-RAG quality evaluator with faithfulness, citation grounding, and drift detection
-
-This report presents the methodology, dataset, evaluation results, and analysis
-of the rag-quality-evaluator project. We describe the design choices, baseline
-comparisons, and the key empirical findings that distinguish this approach from
-prior work. All code, data preparation scripts, and figures are reproducible from
-the open-source repository.
+We present `rag-quality-evaluator`, a multi-metric quality evaluator for
+RAG systems with built-in drift detection across runs. The package
+implements six RAG-specific metrics (faithfulness, answer relevance,
+citation grounding, context precision, context recall, answer
+correctness) with two judge backends (a keyless heuristic for CI and an
+LLM-as-judge for headline numbers). The drift detector runs a Welch's
+t-test between two run snapshots and flags any metric that moved by
+≥ 0.03 absolute or with p < 0.05. We demonstrate the harness on a
+10-sample synthetic fixture with a deliberately-degraded candidate run
+and show the drift detector correctly flags the regression in
+`answer_correctness` (delta = -0.107, p = 0.033) while leaving the
+unrelated retrieval metrics untouched.
 
 # 1. Background
 
-The problem this project addresses is part of a broader research direction in
-applied machine learning. Below we situate the work in the context of recent
-literature and identify the specific gap this project tries to close.
+RAG systems fail in several distinct ways that a single accuracy number
+hides:
 
-## 1.1 Motivation
+- **Hallucination**: the answer makes factual claims the retrieved
+  context does not support.
+- **Citation grounding errors**: the answer cites the wrong chunks.
+- **Retrieval failures**: the right context wasn't retrieved.
+- **Over-summarization or under-summarization**: the answer addresses
+  only part of the question.
 
-RAG quality evaluator with faithfulness, citation grounding, and drift detection The remainder of this section motivates the choice of approach.
-
-## 1.2 Scope
-
-This report covers:
-
-- The dataset and its provenance
-- The methodology and design choices
-- Quantitative results on held-out evaluation
-- Ablation studies on the key hyperparameters
-- Limitations and recommended next steps
+A practical RAG quality evaluator therefore reports a *set* of metrics,
+each targeting a specific failure mode. RAGAS (Es et al., 2023) is the
+standard implementation; this project follows its metric definitions
+but adds a keyless heuristic judge so the suite runs in CI, plus a
+drift-detection layer so the *change* across iterations becomes a first-
+class artifact.
 
 # 2. Related Work
 
-Several lines of work bear directly on this project:
+**RAGAS** (Es et al., 2023): the reference RAG eval framework. Our
+metric definitions match theirs.
 
-1. **Foundation methods.** The seminal papers in this area established the
-   core algorithms and evaluation protocols we reuse.
-2. **Recent extensions.** More recent work has explored variants that address
-   specific shortcomings of the foundation methods.
-3. **Production deployments.** Several open-source implementations exist in
-   the wild; we cite the most relevant ones in the References section.
+**Judging LLMs as judges.** Zheng et al. (2023). We use the per-metric
+mini-rubric pattern rather than one omnibus prompt.
 
-A complete reference list is in Section 11.
+**SelfCheckGPT** (Manakul et al., 2023): hallucination detection by
+self-consistency. Not yet wired in but the API surface matches.
+
+**Drift detection.** Standard two-sample t-tests on per-sample scores;
+nothing exotic, but treating drift detection as a first-class output
+of the eval pipeline is the contribution here.
 
 # 3. Method
 
-This section describes the technical approach.
+## 3.1 Metrics
 
-## 3.1 Overall Architecture
+| metric              | what it measures                                       | judge |
+|---------------------|--------------------------------------------------------|-------|
+| faithfulness        | does the answer's claims appear in the retrieved context? | both |
+| answer_relevance    | does the answer address the question?                  | both |
+| citation_grounding  | if the answer cites chunks, do those chunks back it?   | both |
+| context_precision   | fraction of retrieved chunks that are actually relevant | heur |
+| context_recall      | fraction of gold-answer terms covered by chunks        | heur |
+| answer_correctness  | how close is the answer to the gold (cosine + overlap) | heur |
 
-The system follows a standard pipeline: input ingestion, transformation,
-inference (or retrieval), and evaluation. The architecture diagram below
-shows the per-stage breakdown.
+## 3.2 Heuristic judge
 
-![Architecture](../../results/figures/architecture.png){width=80%}
+Sentence-transformers (BGE-small) embeddings + token overlap (Jaccard).
+The metrics are coarser than the LLM judge but the relative ordering
+across samples is preserved, which is what the drift detector cares
+about.
 
-## 3.2 Component-Level Design
+## 3.3 LLM judge
 
-Each component has a single well-defined responsibility. We describe each
-in turn.
+Per-metric mini-rubric prompts: each judge call asks for one 0-1 score
+plus a one-line rationale, returned as JSON. Smaller rubrics produce
+more consistent JSON outputs at lower judge cost than one omnibus
+prompt. Council mode (N judges) is implemented.
 
-### 3.2.1 Data Loader
+## 3.4 Drift detection
 
-The data loader normalizes the input format and exposes a uniform interface
-to downstream components. It supports both the canonical benchmark format
-and a synthetic fixture for CI.
+```python
+from scipy.stats import ttest_ind
+_, p = ttest_ind(baseline_scores, candidate_scores, equal_var=False)
+delta = mean(candidate) - mean(baseline)
+flagged = abs(delta) >= 0.03 OR p < 0.05
+```
 
-### 3.2.2 Core Processing
-
-The core component implements the main algorithm. Implementation details are
-in `src/`; the per-function docstrings describe inputs, outputs, and complexity.
-
-### 3.2.3 Evaluation
-
-The evaluator computes the metrics described in Section 5 and writes results
-to `results/` for downstream visualization.
-
-## 3.3 Configuration
-
-All hyperparameters are surfaced through the CLI and `pyproject.toml`.
-Defaults are chosen to be safe on a CPU-only laptop; faster machines can
-increase batch sizes and run sizes.
+Welch's t-test (unequal variances) per metric. No multi-test correction
+in v1; that's the obvious next addition.
 
 # 4. Data
 
-## 4.1 Dataset
-
-We use a small but realistic dataset chosen to make the suite reproducible
-on a laptop. For production runs, swap in the corresponding full-scale
-public corpus as documented in the README.
-
-## 4.2 Pre-Processing
-
-Pre-processing follows the published protocol for the relevant benchmark
-where one exists. Custom additions (chunking, normalization, deduplication)
-are documented in the code and reproducible from the Makefile.
-
-## 4.3 Splits
-
-The train/dev/test split is fixed by seed for reproducibility. The exact
-split is recorded in `results/` so that re-runs are bit-comparable.
+The in-repo synthetic fixture has 10 hand-curated Q/A items. Two
+versions (`synthetic.jsonl` and `synthetic_v2.jsonl`); v2 has five
+intentionally-degraded answers (off-topic, vague, factually wrong) so
+the drift detector has something to find.
 
 # 5. Evaluation Setup
 
-## 5.1 Metrics
-
-The metric set is chosen to surface different failure modes of the system,
-not just one headline number. Detailed metric definitions are in the
-section-relevant references.
-
-## 5.2 Baselines
-
-We compare against the published baselines that are most directly comparable,
-and against a trivial baseline (random / majority class) to establish a floor.
-
-## 5.3 Hardware
-
-All results in this report were produced on a CPU-only MacBook M-series.
-GPU runs would be faster but should not change the rank order of the
-methods compared here.
+Baseline + candidate runs through the heuristic judge, drift check,
+then five-chart plot generation. Hardware: Apple M-series CPU.
 
 # 6. Results
 
-## 6.1 Headline Numbers
+Baseline run (`synthetic.jsonl`, n=10):
 
-The headline numbers are in the README table. The figures below break those
-numbers down across the axes that matter most for this task.
+| metric             |  mean | min   | max   |
+|--------------------|------:|------:|------:|
+| faithfulness       | 0.912 | 0.864 | 0.992 |
+| citation_grounding | 0.909 | 0.864 | 0.992 |
+| context_recall     | 0.854 | 0.375 | 1.000 |
+| answer_relevance   | 0.811 | 0.681 | 0.875 |
+| context_precision  | 0.550 | 0.000 | 1.000 |
+| answer_correctness | 0.535 | 0.337 | 0.651 |
 
-![Primary chart](../../results/figures/primary.png){width=80%}
+Drift (candidate `synthetic_v2.jsonl` minus baseline):
 
-## 6.2 Per-Slice Analysis
+| metric             |  delta |     p  | flagged |
+|--------------------|-------:|-------:|--------:|
+| answer_correctness | -0.107 | 0.033  | yes (*) |
+| citation_grounding | -0.041 | 0.164  | yes     |
+| faithfulness       | -0.033 | 0.203  | yes     |
+| answer_relevance   | -0.025 | 0.410  | no      |
+| context_precision  |  0.000 | 1.000  | no      |
+| context_recall     |  0.000 | 1.000  | no      |
 
-Beyond the headline, we report per-category, per-difficulty, and per-input-
-type breakdowns. The per-slice charts make it visible which inputs the
-system handles well and which it fails on.
-
-![Secondary chart](../../results/figures/secondary.png){width=80%}
+The two `context_*` metrics correctly stayed at 0.000 delta because
+the candidate fixture changes only the *answers*, not the retrieved
+contexts; this is what a working drift detector should show. The
+generation-side metrics moved as expected: `answer_correctness` was
+the leading indicator (p < 0.05), followed by `citation_grounding`
+and `faithfulness` flagged by delta threshold.
 
 # 7. Ablations
 
-We ran small ablations on the most-impactful hyperparameters. The full
-sweeps are reproducible from the Makefile; the headline result of each
-ablation is summarized here.
-
-## 7.1 Ablation 1
-
-The first ablation varies the most-tuned hyperparameter across its
-recommended range. The result shows the expected monotonic behavior.
-
-## 7.2 Ablation 2
-
-A second ablation varies the input-side preprocessing to verify the
-sensitivity claim.
+The threshold pair (delta = 0.03, p = 0.05) is conservative; in
+practice you'd tune per-metric. We chose those values because they
+catch the synthetic-degradation regression without false-positives
+on a re-run of the same fixture.
 
 # 8. Discussion
 
-Three things worth being explicit about:
-
-1. **Result interpretation.** What the numbers mean in practice (not just
-   what they are).
-2. **Surprising findings.** Where the data contradicted our prior.
-3. **What to do next.** The set of next experiments motivated by these
-   results.
+The drift-detection framing is the most valuable thing in this repo.
+Most RAG eval tools score a single run; the *change* in scores
+across iterations is what actually informs the "should I ship this
+prompt change" decision. Wrapping a standard t-test around the
+per-sample scores is two functions of code; not having it is
+mostly an oversight in the existing tools.
 
 # 9. Limitations
 
-A complete limitations list:
-
-1. Dataset scale: the in-CI run uses a small fixture; production behavior
-   may differ.
-2. Hardware: results were collected CPU-only; GPU runs may produce different
-   absolute numbers (rank order should be stable).
-3. Baselines: we compared against the most directly comparable published
-   methods, not against every method in the literature.
+1. **Per-metric tests are independent.** No Bonferroni / BH
+   correction. With 6 metrics at p < 0.05, the family-wise false
+   positive rate is ~26%.
+2. **Heuristic judge is coarse.** It captures topical similarity
+   well but is weak on negation. Use LLM judge for headline numbers.
+3. **No bootstrap CIs.** Per-metric means are point estimates.
+4. **The fixture is small (n=10).** Real RAG eval sets are
+   typically 100-1000 items.
 
 # 10. Future Work
 
-- [ ] Scale up to the full public dataset.
-- [ ] Add the GPU code path and report wall-clock and tokens/sec.
-- [ ] Run statistical-significance tests on the per-slice deltas.
-- [ ] Compare against one more recent baseline.
+- [ ] Bonferroni / Benjamini-Hochberg correction on drift p-values.
+- [ ] Bootstrap CIs on per-metric means.
+- [ ] Council judge with reported inter-judge agreement.
+- [ ] Failure-category labels per sample (hallucinated /
+      off-topic / under-supported / irrelevant context).
+- [ ] Hooks for streaming RAG (chunked answers).
 
 # 11. References
 
-See the project's `CITATION.cff` and README for the full bibliography. The
-core references for this project are:
+- Es, S., et al. (2023). *RAGAS: Automated Evaluation of Retrieval
+  Augmented Generation.* arXiv:2309.15217.
+- Manakul, P., et al. (2023). *SelfCheckGPT: Zero-Resource Black-Box
+  Hallucination Detection.* EMNLP.
+- Zheng, L., et al. (2023). *Judging LLM-as-a-Judge with MT-Bench and
+  Chatbot Arena.* NeurIPS.
 
-1. The seminal paper for the technique.
-2. The benchmark or dataset paper.
-3. A recent survey of the area.
+# Appendix A. Reproducibility
 
-# Appendix A. Reproducibility Checklist
-
-- [x] All code is open source under MIT.
-- [x] All hyperparameters are recorded in `pyproject.toml` defaults + CLI.
-- [x] All random seeds are fixed in the runner.
-- [x] All datasets are downloaded from a public source.
-- [x] Test artifacts are captured in `docs/test_results/`.
+- Repo: `Akshitha024/rag-quality-evaluator`, MIT.
+- Reproduce: `make eval && cp results/latest__samples.jsonl
+  results/baseline__samples.jsonl && make eval DATA=tests/fixtures/synthetic_v2.jsonl
+  && make drift && make plots`.
+- Test artifacts in `docs/test_results/`.
