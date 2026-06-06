@@ -142,14 +142,14 @@ flowchart LR
     A[samples.jsonl] --> B[load_samples]
     B --> C{Judge}
     C -->|heuristic| D1[sentence-transformers + token overlap]
-    C -->|llm| D2[Anthropic/OpenAI w/ per-metric rubric]
+    C -->|llm| D2["Anthropic/OpenAI w/ per-metric rubric"]
     D1 --> E[score]
     D2 --> E
-    E --> F[results/RUN__samples.jsonl]
-    E --> G[results/RUN__summary.json]
+    E --> F["results/RUN__samples.jsonl"]
+    E --> G["results/RUN__summary.json"]
     F --> H[viz.charts]
     F --> I[evaluators.drift.detect]
-    I --> J[results/drift.json]
+    I --> J["results/drift.json"]
     J --> H
     H --> K[6 figures]
 ```
