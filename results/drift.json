@@ -1,0 +1,50 @@
+[
+  {
+    "metric": "answer_correctness",
+    "baseline_mean": 0.5348635343478355,
+    "candidate_mean": 0.42775097120891914,
+    "delta": -0.10711256313891637,
+    "p_value": 0.03321735006880163,
+    "drifted": true
+  },
+  {
+    "metric": "answer_relevance",
+    "baseline_mean": 0.8109578251838684,
+    "candidate_mean": 0.7863879799842834,
+    "delta": -0.02456984519958494,
+    "p_value": 0.41014593259107024,
+    "drifted": false
+  },
+  {
+    "metric": "citation_grounding",
+    "baseline_mean": 0.9092091023921967,
+    "candidate_mean": 0.8680189430713654,
+    "delta": -0.041190159320831254,
+    "p_value": 0.16386474710079216,
+    "drifted": true
+  },
+  {
+    "metric": "context_precision",
+    "baseline_mean": 0.55,
+    "candidate_mean": 0.55,
+    "delta": 0.0,
+    "p_value": 1.0,
+    "drifted": false
+  },
+  {
+    "metric": "context_recall",
+    "baseline_mean": 0.8541666666666667,
+    "candidate_mean": 0.8541666666666667,
+    "delta": 0.0,
+    "p_value": 1.0,
+    "drifted": false
+  },
+  {
+    "metric": "faithfulness",
+    "baseline_mean": 0.9117731869220733,
+    "candidate_mean": 0.8789595365524292,
+    "delta": -0.03281365036964412,
+    "p_value": 0.20310569573694662,
+    "drifted": true
+  }
+]

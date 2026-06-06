@@ -65,7 +65,13 @@ def cmd_drift(
 ) -> None:
     reports = detect(baseline, candidate)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps([asdict(r) for r in reports], indent=2))
+    serializable = [
+        {**asdict(r), "drifted": bool(r.drifted), "p_value": float(r.p_value),
+         "baseline_mean": float(r.baseline_mean), "candidate_mean": float(r.candidate_mean),
+         "delta": float(r.delta)}
+        for r in reports
+    ]
+    out.write_text(json.dumps(serializable, indent=2))
     rows = [
         (r.metric, r.baseline_mean, r.candidate_mean, r.delta, r.p_value, r.drifted)
         for r in reports
