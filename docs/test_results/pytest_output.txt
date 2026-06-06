@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.14, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/mani/Projects/akshitha-portfolio/projects/rag-evaluator
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.13.0
+collected 15 items
+
+tests/test_drift.py ...                                                  [ 20%]
+tests/test_heuristic.py .....                                            [ 53%]
+tests/test_llm_judge_parse.py ....                                       [ 80%]
+tests/test_load.py .                                                     [ 86%]
+tests/test_types.py ..                                                   [100%]
+
+=============================== warnings summary ===============================
+tests/test_drift.py::test_obvious_drift
+  /Users/mani/Projects/akshitha-portfolio/projects/rag-evaluator/.venv/lib/python3.11/site-packages/scipy/stats/_axis_nan_policy.py:592: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+    res = hypotest_fun_out(*samples, **kwds)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 15 passed, 1 warning in 1.02s =========================

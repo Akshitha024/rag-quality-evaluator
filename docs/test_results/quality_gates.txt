@@ -1,0 +1,10 @@
+=== ruff check ===
+All checks passed!
+
+=== ruff format --check ===
+Would reformat: src/rev/cli/main.py
+1 file would be reformatted, 17 files already formatted
+
+=== mypy ===
+Success: no issues found in 12 source files
+

@@ -1,0 +1,26 @@
+...............                                                          [100%]
+=============================== warnings summary ===============================
+tests/test_drift.py::test_obvious_drift
+  /Users/mani/Projects/akshitha-portfolio/projects/rag-evaluator/.venv/lib/python3.11/site-packages/scipy/stats/_axis_nan_policy.py:592: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+    res = hypotest_fun_out(*samples, **kwds)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.14-final-0 _______________
+
+Name                             Stmts   Miss  Cover
+----------------------------------------------------
+src/rev/__init__.py                  1      0   100%
+src/rev/cli/__init__.py              0      0   100%
+src/rev/cli/main.py                 50     50     0%
+src/rev/evaluators/__init__.py       0      0   100%
+src/rev/evaluators/drift.py         44      2    95%
+src/rev/evaluators/run.py           54     33    39%
+src/rev/judges/__init__.py           0      0   100%
+src/rev/judges/heuristic.py         67     44    34%
+src/rev/judges/llm.py               73     39    47%
+src/rev/types.py                    25      0   100%
+src/rev/viz/__init__.py              0      0   100%
+src/rev/viz/charts.py              192    192     0%
+----------------------------------------------------
+TOTAL                              506    360    29%
