@@ -1,0 +1,21 @@
+# Judge Council palette for this repo. Re-rendered charts pick this up.
+axes.facecolor: #FAF3DD
+figure.facecolor: #FAF3DD
+axes.edgecolor: #1c1c1c
+axes.labelcolor: #1c1c1c
+axes.titlecolor: #1c1c1c
+axes.titleweight: bold
+xtick.color: #1c1c1c
+ytick.color: #1c1c1c
+grid.color: #FFE5B4
+grid.alpha: 0.5
+axes.grid: True
+axes.spines.top: False
+axes.spines.right: False
+axes.prop_cycle: cycler('color', [#3D348B, #7678ED, #F7B801, #F18701, #F35B04, #247BA0])
+font.family: sans-serif
+font.sans-serif: Helvetica, Arial, DejaVu Sans
+font.size: 10
+figure.titlesize: 14
+figure.titleweight: bold
+image.cmap: magma
